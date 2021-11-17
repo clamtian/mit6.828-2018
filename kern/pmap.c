@@ -135,9 +135,17 @@ mem_init(void)
 
 	//////////////////////////////////////////////////////////////////////
 	// create initial page directory.
+	cprintf("kern_pgdir = %x\n", kern_pgdir);
+	cprintf("kern_pgdir address = %x\n", &kern_pgdir);
 	kern_pgdir = (pde_t *) boot_alloc(PGSIZE);
+
+	cprintf("kern_pgdir = %x\n", kern_pgdir);
+	cprintf("kern_pgdir address = %x\n", &kern_pgdir);
+
 	memset(kern_pgdir, 0, PGSIZE);
 
+	cprintf("kern_pgdir = %x\n", kern_pgdir);
+	cprintf("kern_pgdir address = %x\n", &kern_pgdir);
 	//////////////////////////////////////////////////////////////////////
 	// Recursively insert PD in itself as a page table, to form
 	// a virtual page table at virtual address UVPT.
