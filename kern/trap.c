@@ -135,6 +135,7 @@ trap_init_percpu(void)
 void
 print_trapframe(struct Trapframe *tf)
 {
+	cprintf("Incoming TRAP frame at 0xefffffbc\n");
 	cprintf("TRAP frame at %p\n", tf);
 	print_regs(&tf->tf_regs);
 	cprintf("  es   0x----%04x\n", tf->tf_es);

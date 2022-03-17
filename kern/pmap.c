@@ -144,8 +144,8 @@ mem_init(void)
 	//cprintf("page_free_list = %x\n", page_free_list);
 	//cprintf("page_free_list address = %x\n", &page_free_list);
 	kern_pgdir = (pde_t *) boot_alloc(PGSIZE);
-	cprintf("kern_pgdir = %x\n", kern_pgdir);
-	cprintf("kern_pgdir address = %x\n", &kern_pgdir);
+	///cprintf("kern_pgdir = %x\n", kern_pgdir);
+	//cprintf("kern_pgdir address = %x\n", &kern_pgdir);
 	//boot_alloc(0);
 	//cprintf("kern_pgdir = %x\n", kern_pgdir);
 	//cprintf("kern_pgdir address = %x\n", &kern_pgdir);
