@@ -234,7 +234,7 @@ mem_init(void)
 	// we just set up the mapping anyway.
 	// Permissions: kernel RW, user NONE
 	// Your code goes here:
-
+	boot_map_region(kern_pgdir, KERNBASE, 0xffffffff - KERNBASE, 0, PTE_W);
 	// Initialize the SMP-related parts of the memory map
 	mem_init_mp();
 
@@ -285,7 +285,15 @@ mem_init_mp(void)
 	//     Permissions: kernel RW, user NONE
 	//
 	// LAB 4: Your code here:
-
+	int i;
+	for(i = 0; i < NCPU; ++i){
+		uintptr_t kstacktop_i = KSTACKTOP - i * (KSTKSIZE + KSTKGAP);
+		boot_map_region(kern_pgdir, 
+						kstacktop_i - KSTKSIZE, 
+						KSTKSIZE, 
+						(physaddr_t)PADDR(&percpu_kstacks[i]), 
+						PTE_P | PTE_W);
+	}
 }
 
 // --------------------------------------------------------------
@@ -334,7 +342,7 @@ page_init(void)
 	size_t index_alloc_end = PADDR(boot_alloc(0)) / PGSIZE;
 
 	for (i = 1; i < npages; i++) {
-		if(i >= index_IOhole_begin && i < index_alloc_end){
+		if((i >= index_IOhole_begin && i < index_alloc_end) || (i == MPENTRY_PADDR / PGSIZE)){
 			pages[i].pp_ref = 1;
 			pages[i].pp_link = NULL;
 		}else{
@@ -624,7 +632,18 @@ mmio_map_region(physaddr_t pa, size_t size)
 	// Hint: The staff solution uses boot_map_region.
 	//
 	// Your code here:
-	panic("mmio_map_region not implemented");
+
+	physaddr_t pa_begin = ROUNDDOWN(pa, PGSIZE);
+	physaddr_t pa_end = ROUNDUP(pa + size, PGSIZE);
+	if (pa_end - pa_begin >= MMIOLIM - MMIOBASE) {
+	    panic("mmio_map_region: requesting size too large.\n");
+	}
+	size = pa_end - pa_begin;
+	boot_map_region(kern_pgdir, base, size, pa_begin, PTE_W | PTE_PCD | PTE_PWT);
+	void *ret = (void *)base;
+	base += size;
+	return ret;
+	//panic("mmio_map_region not implemented");
 }
 
 static uintptr_t user_mem_check_addr;
