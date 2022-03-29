@@ -273,7 +273,7 @@ env_alloc(struct Env **newenv_store, envid_t parent_id)
 	env_free_list = e->env_link;
 	*newenv_store = e;
 
-	cprintf("[%08x] new env %08x\n", curenv ? curenv->env_id : 0, e->env_id);
+	cprintf("[%08x] new env %08x with idx = %d\n", curenv ? curenv->env_id : 0, e->env_id, ENVX(e->env_id));
 	return 0;
 }
 
@@ -548,7 +548,7 @@ env_run(struct Env *e)
 	// LAB 3: Your code here.
 
 
-	if(curenv && curenv->env_status == ENV_RUNNABLE){
+	if(curenv && curenv->env_status == ENV_RUNNING){
 		curenv->env_status = ENV_RUNNABLE;
 	}
 	curenv = e;
@@ -557,6 +557,7 @@ env_run(struct Env *e)
 
 	lcr3(PADDR(curenv->env_pgdir));
 
+	unlock_kernel();
 	//cprintf("tfno = %d\n", curenv->env_tf);
 	env_pop_tf(&(curenv->env_tf));
 
