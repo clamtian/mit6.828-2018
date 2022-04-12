@@ -14,39 +14,29 @@
 static void
 pgfault(struct UTrapframe *utf)
 {
-	void *addr = (void *) utf->utf_fault_va;
-	uint32_t err = utf->utf_err;
-	int r;
+    int r;
+    void *addr = (void *) utf->utf_fault_va;
+    uint32_t err = utf->utf_err;
 
-	// Check that the faulting access was (1) a write, and (2) to a
-	// copy-on-write page.  If not, panic.
-	// Hint:
-	//   Use the read-only page table mappings at uvpt
-	//   (see <inc/memlayout.h>).
+    if ((err & FEC_WR) == 0 || (uvpt[PGNUM(addr)] & PTE_COW) == 0)
+        panic("pgfault: it's not writable or attempt to access a non-cow page!");
+    // Allocate a new page, map it at a temporary location (PFTEMP),
+    // copy the data from the old page to the new page, then move the new
+    // page to the old page's address.
 
-	// LAB 4: Your code here.
-	if(!((err & FEC_WR)&&(uvpt[PGNUM(addr)] & (PTE_W | PTE_COW))))
-		panic("pgfault conditions wrong!\n");
-	// Allocate a new page, map it at a temporary location (PFTEMP),
-	// copy the data from the old page to the new page, then move the new
-	// page to the old page's address.
-	// Hint:
-	//   You should make three system calls.
+    envid_t envid = sys_getenvid();
+    if ((r = sys_page_alloc(envid, (void *)PFTEMP, PTE_P | PTE_W | PTE_U)) < 0)
+        panic("pgfault: page allocation failed %e", r);
 
-	// LAB 4: Your code here.
-	envid_t id = sys_getenvid();
-	if(sys_page_alloc(id, (void *)PFTEMP, PTE_P | PTE_W | PTE_U) < 0) 
-		panic("page alloc failed!");
-	addr = ROUNDDOWN(addr, PGSIZE);
-	memcpy((void *)PFTEMP, (void *)addr, PGSIZE);
-	if(sys_page_map(id, (void *)PFTEMP, id, (void *)addr, PTE_P | PTE_W | PTE_U) < 0 )
-		panic("page amp failed");
-	if(sys_page_unmap(id, (void *)PFTEMP) < 0)
-		panic("page unmap failed");
-	
-	// panic("pgfault not implemented");
+    addr = ROUNDDOWN(addr, PGSIZE);
+    memmove(PFTEMP, addr, PGSIZE);
+    if ((r = sys_page_unmap(envid, addr)) < 0)
+        panic("pgfault: page unmap failed %e", r);
+    if ((r = sys_page_map(envid, PFTEMP, envid, addr, PTE_P | PTE_W |PTE_U)) < 0)
+        panic("pgfault: page map failed %e", r);
+    if ((r = sys_page_unmap(envid, PFTEMP)) < 0)
+        panic("pgfault: page unmap failed %e", r);
 }
-
 //
 // Map our virtual page pn (address pn*PGSIZE) into the target envid
 // at the same virtual address.  If the page is writable or copy-on-write,
@@ -61,22 +51,28 @@ pgfault(struct UTrapframe *utf)
 static int
 duppage(envid_t envid, unsigned pn)
 {
-	int r;
+    int r;
 
-	// LAB 4: Your code here.
-		void *addr = (void *)(pn * PGSIZE);
-	if (uvpt[pn] & (PTE_W|PTE_COW)) {
-		if ((r = sys_page_map(0, addr, envid, addr, PTE_COW|PTE_U|PTE_P)) < 0)
-			panic("sys_page_map COW:%e", r);
+    void *addr;
+    pte_t pte;
+    int perm;
 
-		if ((r = sys_page_map(0, addr, 0, addr, PTE_COW|PTE_U|PTE_P)) < 0)
-			panic("sys_page_map COW:%e", r);
-	} else {
-		if ((r = sys_page_map(0, addr, envid, addr, PTE_U|PTE_P)) < 0)
-			panic("sys_page_map UP:%e", r);
-	}
-	// panic("duppage not implemented");
-	return 0;
+    addr = (void *)((uint32_t)pn * PGSIZE);
+    pte = uvpt[pn];
+    perm = PTE_P | PTE_U;
+    if ((pte & PTE_W) || (pte & PTE_COW))
+        perm |= PTE_COW;
+    if ((r = sys_page_map(thisenv->env_id, addr, envid, addr, perm)) < 0) {
+        panic("duppage: page remapping failed %e", r);
+        return r;
+    }
+    if (perm & PTE_COW) {
+        if ((r = sys_page_map(thisenv->env_id, addr, thisenv->env_id, addr, perm)) < 0) {
+            panic("duppage: page remapping failed %e", r);
+            return r;
+        }
+    }
+    return 0;
 }
 
 //
@@ -99,7 +95,7 @@ envid_t
 fork(void)
 {
 	// LAB 4: Your code here.
-		set_pgfault_handler(pgfault);
+	set_pgfault_handler(pgfault);
 
 	envid_t envid = sys_exofork();
 	uint8_t *addr;
@@ -110,8 +106,7 @@ fork(void)
 		return 0;
 	}
 
-	extern unsigned char end[];
-	for (addr = (uint8_t *)UTEXT; addr < end; addr += PGSIZE) {
+	for (addr = (uint8_t *)UTEXT; addr < (uint8_t *)USTACKTOP; addr += PGSIZE) {
 		if ((uvpd[PDX(addr)] & PTE_P) && (uvpt[PGNUM(addr)] & PTE_P)
 				&& (uvpt[PGNUM(addr)] & PTE_U)) {
 			duppage(envid, PGNUM(addr));
