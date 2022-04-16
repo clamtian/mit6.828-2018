@@ -72,7 +72,7 @@ trap_init(void)
 {
 	extern struct Segdesc gdt[];
 
-		// LAB 3: Your code here.
+	// LAB 3: Your code here.
 	void handler0();
 	void handler1();
 	void handler2();
@@ -90,6 +90,12 @@ trap_init(void)
 	void handler15();
 	void handler16();
 	void handler48();
+	void handler32();
+	void handler33();
+	void handler36();
+	void handler39();
+	void handler46();
+	void handler51();
 
 	SETGATE(idt[T_DIVIDE], 1, GD_KT, handler0, 0);
 	SETGATE(idt[T_DEBUG], 1, GD_KT, handler1, 0);
@@ -107,11 +113,19 @@ trap_init(void)
 	SETGATE(idt[T_SEGNP], 1, GD_KT, handler11, 0);
 	SETGATE(idt[T_STACK], 1, GD_KT, handler12, 0);
 	SETGATE(idt[T_GPFLT], 1, GD_KT, handler13, 0);
-	SETGATE(idt[T_PGFLT], 1, GD_KT, handler14, 0);
+	SETGATE(idt[T_PGFLT], 0, GD_KT, handler14, 0);
 	SETGATE(idt[T_FPERR], 1, GD_KT, handler16, 0);
 
 	// T_SYSCALL DPL 3
 	SETGATE(idt[T_SYSCALL], 0, GD_KT, handler48, 3);
+
+	// IRQ
+	SETGATE(idt[IRQ_TIMER + IRQ_OFFSET], 0, GD_KT, handler32, 3);
+	SETGATE(idt[IRQ_KBD + IRQ_OFFSET], 0, GD_KT, handler33, 3);
+	SETGATE(idt[IRQ_SERIAL + IRQ_OFFSET], 0, GD_KT, handler36, 3);
+	SETGATE(idt[IRQ_SPURIOUS + IRQ_OFFSET], 0, GD_KT, handler39, 3);
+	SETGATE(idt[IRQ_IDE + IRQ_OFFSET], 0, GD_KT, handler46, 3);
+	SETGATE(idt[IRQ_ERROR + IRQ_OFFSET], 0, GD_KT, handler51, 3);
 	// Per-CPU setup 
 	trap_init_percpu();
 }
@@ -249,6 +263,11 @@ trap_dispatch(struct Trapframe *tf)
 	// Handle clock interrupts. Don't forget to acknowledge the
 	// interrupt using lapic_eoi() before calling the scheduler!
 	// LAB 4: Your code here.
+	if (tf->tf_trapno == IRQ_OFFSET + IRQ_TIMER) {
+		lapic_eoi();
+		sched_yield();
+		return;
+	}
 
 	// Unexpected trap: The user process or the kernel has a bug.
 	print_trapframe(tf);
@@ -342,26 +361,7 @@ page_fault_handler(struct Trapframe *tf)
 	// page fault stack frame on the user exception stack (below
 	// UXSTACKTOP), then branch to curenv->env_pgfault_upcall.
 	//
-	if(curenv->env_pgfault_upcall){
-		struct UTrapframe *utf;
-		if(tf->tf_esp >=  UXSTACKTOP-PGSIZE && tf->tf_esp < UXSTACKTOP){
-			utf = (struct UTrapframe *)(tf->tf_esp - sizeof(struct UTrapframe) - 4);
-		}else {
-			utf = (struct UTrapframe *)(UXSTACKTOP- sizeof(struct UTrapframe));
-		}
-		user_mem_assert(curenv, utf, 1, PTE_W);
-
-		utf->utf_fault_va = fault_va;
-		utf->utf_err = tf->tf_err;
-		utf->utf_regs = tf->tf_regs;
-		utf->utf_eip = tf->tf_eip;
-		utf->utf_eflags = tf->tf_eflags;
-		utf->utf_esp = tf->tf_esp;
-
-		curenv->env_tf.tf_eip = (uintptr_t)curenv->env_pgfault_upcall;
-		curenv->env_tf.tf_esp = (uintptr_t)utf;
-		env_run(curenv);
-	}
+	
 	// The page fault upcall might cause another page fault, in which case
 	// we branch to the page fault upcall recursively, pushing another
 	// page fault stack frame on top of the user exception stack.
@@ -388,7 +388,26 @@ page_fault_handler(struct Trapframe *tf)
 	//   (the 'tf' variable points at 'curenv->env_tf').
 
 	// LAB 4: Your code here.
+	if(curenv->env_pgfault_upcall){
+		struct UTrapframe *utf;
+		if(tf->tf_esp >=  UXSTACKTOP-PGSIZE && tf->tf_esp < UXSTACKTOP){
+			utf = (struct UTrapframe *)(tf->tf_esp - sizeof(struct UTrapframe) - 4);
+		}else {
+			utf = (struct UTrapframe *)(UXSTACKTOP- sizeof(struct UTrapframe));
+		}
+		user_mem_assert(curenv, utf, 1, PTE_W);
 
+		utf->utf_fault_va = fault_va;
+		utf->utf_err = tf->tf_err;
+		utf->utf_regs = tf->tf_regs;
+		utf->utf_eip = tf->tf_eip;
+		utf->utf_eflags = tf->tf_eflags;
+		utf->utf_esp = tf->tf_esp;
+
+		curenv->env_tf.tf_eip = (uintptr_t)curenv->env_pgfault_upcall;
+		curenv->env_tf.tf_esp = (uintptr_t)utf;
+		env_run(curenv);
+	}
 	// Destroy the environment that caused the fault.
 	cprintf("[%08x] user fault va %08x ip %08x\n",
 		curenv->env_id, fault_va, tf->tf_eip);
