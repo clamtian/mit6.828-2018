@@ -17,9 +17,11 @@ pgfault(struct UTrapframe *utf)
     int r;
     void *addr = (void *) utf->utf_fault_va;
     uint32_t err = utf->utf_err;
-
-    if ((err & FEC_WR) == 0 || (uvpt[PGNUM(addr)] & PTE_COW) == 0)
-        panic("pgfault: it's not writable or attempt to access a non-cow page!");
+    //cprintf("envid is %d, running pgfault\n", sys_getenvid());
+    if ((err & FEC_WR) == 0 && (uvpt[PGNUM(addr)] & PTE_COW) == 0)
+        panic("%x, pgfault: it's not writable or attempt to access a non-cow page!, %x", sys_getenvid(), addr);
+    
+    //cprintf("%x have %x\n", sys_getenvid(), addr);
     // Allocate a new page, map it at a temporary location (PFTEMP),
     // copy the data from the old page to the new page, then move the new
     // page to the old page's address.
@@ -60,18 +62,19 @@ duppage(envid_t envid, unsigned pn)
     addr = (void *)((uint32_t)pn * PGSIZE);
     pte = uvpt[pn];
     perm = PTE_P | PTE_U;
-    if ((pte & PTE_W) || (pte & PTE_COW))
-        perm |= PTE_COW;
-    if ((r = sys_page_map(thisenv->env_id, addr, envid, addr, perm)) < 0) {
-        panic("duppage: page remapping failed %e", r);
-        return r;
-    }
-    if (perm & PTE_COW) {
-        if ((r = sys_page_map(thisenv->env_id, addr, thisenv->env_id, addr, perm)) < 0) {
+    if (pte & PTE_SHARE) {
+        if ((r = sys_page_map(thisenv->env_id, addr, envid, addr, PTE_SYSCALL)) < 0) 
             panic("duppage: page remapping failed %e", r);
-            return r;
-        }
-    }
+    } else if (pte & (PTE_W | PTE_COW)) {
+        perm |= PTE_COW;
+        if ((r = sys_page_map(thisenv->env_id, addr, envid, addr, perm)) < 0) 
+            panic("duppage: page remapping failed %e", r);
+        if ((r = sys_page_map(thisenv->env_id, addr, thisenv->env_id, addr, perm)) < 0) 
+            panic("duppage: page remapping failed %e", r);
+    } else {
+		if ((r = sys_page_map(thisenv->env_id, addr, envid, addr, PTE_U|PTE_P)) < 0)
+			panic("duppage: page remapping failed %e", r);
+	}
     return 0;
 }
 

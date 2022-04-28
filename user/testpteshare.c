@@ -19,6 +19,8 @@ umain(int argc, char **argv)
 		panic("sys_page_alloc: %e", r);
 
 	// check fork
+	//cprintf("test fork\n");
+	
 	if ((r = fork()) < 0)
 		panic("fork: %e", r);
 	if (r == 0) {
@@ -28,7 +30,10 @@ umain(int argc, char **argv)
 	wait(r);
 	cprintf("fork handles PTE_SHARE %s\n", strcmp(VA, msg) == 0 ? "right" : "wrong");
 
+	
 	// check spawn
+	//cprintf("test spawn\n");
+	
 	if ((r = spawnl("/testpteshare", "testpteshare", "arg", 0)) < 0)
 		panic("spawn: %e", r);
 	wait(r);

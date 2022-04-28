@@ -129,7 +129,21 @@ sys_env_set_trapframe(envid_t envid, struct Trapframe *tf)
 	// LAB 5: Your code here.
 	// Remember to check whether the user has supplied us with a good
 	// address!
-	panic("sys_env_set_trapframe not implemented");
+    struct Env *e;
+    int r;
+
+    if ((r = envid2env(envid, &e, 1)) < 0)
+        return -E_BAD_ENV;
+    //kern/syscall.c/sys_env_set_trapframe()
+	user_mem_assert(e, (const void *) tf, sizeof(struct Trapframe), PTE_U);
+	e->env_tf = *tf;
+	e->env_tf.tf_eflags |= FL_IF;
+	//e->env_tf.tf_eflags |= FL_IOPL_0;
+	tf->tf_eflags &= ~FL_IOPL_MASK;         //普通进程不能有IO权限
+	e->env_tf.tf_cs |= 3;
+
+	return 0; 
+	//panic("sys_env_set_trapframe not implemented");
 }
 
 // Set the page fault upcall for 'envid' by modifying the corresponding struct
@@ -146,11 +160,8 @@ sys_env_set_pgfault_upcall(envid_t envid, void *func)
 	// LAB 4: Your code here.
 	struct Env* e;
 	int res = envid2env(envid, &e, 1);
-	if(res < 0) {
-		cprintf("up here");
+	if(res < 0) 
 		return res;
-		
-	}
 	e->env_pgfault_upcall = func;
 	return 0;
 
@@ -237,7 +248,6 @@ sys_page_map(envid_t srcenvid, void *srcva,
 	struct Env *srcenv, *dstenv;
     struct PageInfo *pp;
     pte_t *pte;
-
     if (envid2env(srcenvid, &srcenv, 1) < 0 || envid2env(dstenvid, &dstenv, 1) < 0)
         return -E_BAD_ENV;
     if ((uintptr_t)srcva >= UTOP || PGOFF(srcva) || (uintptr_t)dstva >= UTOP || PGOFF(dstva))
@@ -250,6 +260,8 @@ sys_page_map(envid_t srcenvid, void *srcva,
         return -E_INVAL;
     if (page_insert(dstenv->env_pgdir, pp, dstva, perm) < 0)
         return -E_NO_MEM;
+
+	
     return 0;
 	// panic("sys_page_map not implemented");
 }
@@ -419,6 +431,8 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 			return sys_ipc_try_send(a1, a2, (void *)a3, (unsigned int)a4);
 		case SYS_ipc_recv:
 			return sys_ipc_recv((void *)a1);
+		case SYS_env_set_trapframe:
+            return sys_env_set_trapframe(a1, (struct Trapframe *)a2);
 		default:
 			return -E_INVAL;
 	}

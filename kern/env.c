@@ -419,6 +419,9 @@ env_create(uint8_t *binary, enum EnvType type)
 
 	// If this is the file server (type == ENV_TYPE_FS) give it I/O privileges.
 	// LAB 5: Your code here.
+
+	if (type == ENV_TYPE_FS) 
+		e->env_tf.tf_eflags |= FL_IOPL_MASK;
 }
 
 //
@@ -489,9 +492,9 @@ env_destroy(struct Env *e)
 		e->env_status = ENV_DYING;
 		return;
 	}
-
+	//cprintf("env %d is free\n", curenv->env_id);
 	env_free(e);
-
+	
 	if (curenv == e) {
 		curenv = NULL;
 		sched_yield();

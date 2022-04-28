@@ -107,7 +107,12 @@ spawn(const char *prog, const char **argv)
 	child_tf = envs[ENVX(child)].env_tf;
 	child_tf.tf_eip = elf->e_entry;
 
-	if ((r = init_stack(child, argv, &child_tf.tf_esp)) < 0)
+	uintptr_t tmp;
+
+	memcpy(&tmp, &child_tf.tf_esp, sizeof(child_tf.tf_esp));
+
+	//if ((r = init_stack(child, argv, &child_tf.tf_esp)) < 0)
+	if ((r = init_stack(child, argv, &tmp)) < 0)
 		return r;
 
 	// Set up program segments as defined in ELF header.
@@ -124,7 +129,6 @@ spawn(const char *prog, const char **argv)
 	}
 	close(fd);
 	fd = -1;
-
 	// Copy shared library state.
 	if ((r = copy_shared_pages(child)) < 0)
 		panic("copy_shared_pages: %e", r);
@@ -302,6 +306,19 @@ static int
 copy_shared_pages(envid_t child)
 {
 	// LAB 5: Your code here.
-	return 0;
+	
+	//if (thisenv->env_id == 0x1004) cprintf("child %x ccc\n", child);
+    uintptr_t addr;
+    for (addr = 0; addr < UTOP; addr += PGSIZE) {
+		//if (thisenv->env_id == 0x1004) cprintf("addr %x ccc\n", addr);
+        if ((uvpd[PDX(addr)] & PTE_P) && (uvpt[PGNUM(addr)] & PTE_P) &&
+                (uvpt[PGNUM(addr)] & PTE_U) && (uvpt[PGNUM(addr)] & PTE_SHARE)) {
+			cprintf("addr %x ccc\n", addr);	
+            cprintf("%x copy shared page %x to env:%x\n", thisenv->env_id, addr, child);
+            sys_page_map(thisenv->env_id, (void*)addr, child, (void*)addr, PTE_SYSCALL);
+        }
+    }
+	//cprintf("cccc\n");
+    return 0;
 }
 

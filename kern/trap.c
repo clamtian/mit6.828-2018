@@ -271,7 +271,14 @@ trap_dispatch(struct Trapframe *tf)
 
 	// Handle keyboard and serial interrupts.
 	// LAB 5: Your code here.
-
+	if (tf->tf_trapno == IRQ_OFFSET + IRQ_KBD){
+		kbd_intr();
+		return;
+	} 
+	else if (tf->tf_trapno == IRQ_OFFSET + IRQ_SERIAL){
+		serial_intr();
+		return;
+	}
 	// Unexpected trap: The user process or the kernel has a bug.
 	print_trapframe(tf);
 	if (tf->tf_cs == GD_KT)
@@ -354,7 +361,6 @@ page_fault_handler(struct Trapframe *tf)
 	fault_va = rcr2();
 
 	// Handle kernel-mode page faults.
-
 	// LAB 3: Your code here.
 	if(!(tf->tf_cs && 0x01)) panic("kernel-mode page fault, fault address %d\n", fault_va);
 	// We've already handled kernel-mode exceptions, so if we get here,
@@ -398,6 +404,7 @@ page_fault_handler(struct Trapframe *tf)
 		}else {
 			utf = (struct UTrapframe *)(UXSTACKTOP- sizeof(struct UTrapframe));
 		}
+		//cprintf("envid is %d, running page_fault_handler, fault va is %x\n", curenv->env_id, fault_va);
 		user_mem_assert(curenv, utf, 1, PTE_W);
 
 		utf->utf_fault_va = fault_va;
