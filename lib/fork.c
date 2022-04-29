@@ -63,7 +63,7 @@ duppage(envid_t envid, unsigned pn)
     pte = uvpt[pn];
     perm = PTE_P | PTE_U;
     if (pte & PTE_SHARE) {
-        if ((r = sys_page_map(thisenv->env_id, addr, envid, addr, PTE_SYSCALL)) < 0) 
+        if ((r = sys_page_map(thisenv->env_id, addr, envid, addr, pte & PTE_SYSCALL)) < 0) 
             panic("duppage: page remapping failed %e", r);
     } else if (pte & (PTE_W | PTE_COW)) {
         perm |= PTE_COW;

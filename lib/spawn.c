@@ -313,8 +313,8 @@ copy_shared_pages(envid_t child)
 		//if (thisenv->env_id == 0x1004) cprintf("addr %x ccc\n", addr);
         if ((uvpd[PDX(addr)] & PTE_P) && (uvpt[PGNUM(addr)] & PTE_P) &&
                 (uvpt[PGNUM(addr)] & PTE_U) && (uvpt[PGNUM(addr)] & PTE_SHARE)) {
-			cprintf("addr %x ccc\n", addr);	
-            cprintf("%x copy shared page %x to env:%x\n", thisenv->env_id, addr, child);
+			//cprintf("addr %x ccc\n", addr);	
+            //cprintf("%x copy shared page %x to env:%x\n", thisenv->env_id, addr, child);
             sys_page_map(thisenv->env_id, (void*)addr, child, (void*)addr, PTE_SYSCALL);
         }
     }

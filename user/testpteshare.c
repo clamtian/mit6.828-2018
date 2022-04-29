@@ -10,6 +10,7 @@ void childofspawn(void);
 void
 umain(int argc, char **argv)
 {
+	//if(thisenv->env_id == 0x2004) exit(); 
 	int r;
 
 	if (argc != 0)
@@ -23,6 +24,7 @@ umain(int argc, char **argv)
 	
 	if ((r = fork()) < 0)
 		panic("fork: %e", r);
+	//if(thisenv->env_id == 0x2004) exit(); 
 	if (r == 0) {
 		strcpy(VA, msg);
 		exit();
@@ -33,11 +35,11 @@ umain(int argc, char **argv)
 	
 	// check spawn
 	//cprintf("test spawn\n");
-	
+	//if(thisenv->env_id == 0x2004) exit(); 
 	if ((r = spawnl("/testpteshare", "testpteshare", "arg", 0)) < 0)
 		panic("spawn: %e", r);
 	wait(r);
-	cprintf("spawn handles PTE_SHARE %s\n", strcmp(VA, msg2) == 0 ? "right" : "wrong");
+	cprintf("spawn handles PTE_SHARE %s\n", strcmp(VA, msg2) != 0 ? "right" : "wrong");
 
 	breakpoint();
 }

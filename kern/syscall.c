@@ -128,23 +128,19 @@ sys_env_set_trapframe(envid_t envid, struct Trapframe *tf)
 {
 	// LAB 5: Your code here.
 	// Remember to check whether the user has supplied us with a good
-	// address!
-    struct Env *e;
-    int r;
-
-    if ((r = envid2env(envid, &e, 1)) < 0)
-        return -E_BAD_ENV;
-    //kern/syscall.c/sys_env_set_trapframe()
+	// address! 告诉你这里要检查了还不看？？？
+	struct Env *e;
+	int r  =envid2env(envid, &e, 1);
+	if(r != 0)
+		return r;
 	user_mem_assert(e, (const void *) tf, sizeof(struct Trapframe), PTE_U);
+	tf->tf_eflags |= FL_IF;
+	tf->tf_eflags &= ~FL_IOPL_MASK;         
+	tf->tf_cs |= 3;
 	e->env_tf = *tf;
-	e->env_tf.tf_eflags |= FL_IF;
-	//e->env_tf.tf_eflags |= FL_IOPL_0;
-	tf->tf_eflags &= ~FL_IOPL_MASK;         //普通进程不能有IO权限
-	e->env_tf.tf_cs |= 3;
-
 	return 0; 
-	//panic("sys_env_set_trapframe not implemented");
 }
+
 
 // Set the page fault upcall for 'envid' by modifying the corresponding struct
 // Env's 'env_pgfault_upcall' field.  When 'envid' causes a page fault, the
