@@ -5,7 +5,6 @@
 每个lab分两个文档，一个是对于每个lab中涉及到的基础知识以及代码流程进行讲解，另一个是对每个lab中的exercise进行解答。
 
 * [代码地址](https://github.com/clamtian/mit6.828-2018)
-* [lab0_基础知识](https://github.com/clamtian/VSCode/blob/master/Blog/mit6.828/mit6.828_lab0_%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86.md)
 * [lab1_系统启动](https://github.com/clamtian/VSCode/blob/master/Blog/mit6.828/mit6.828_lab1_%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8.md)
 * [lab1_exercise](https://github.com/clamtian/VSCode/blob/master/Blog/mit6.828/mit6.828_lab1_exercise.md)
 * [lab2_内存分配](https://github.com/clamtian/VSCode/blob/master/Blog/mit6.828/mit6.828_lab2_%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D.md)

@@ -136,29 +136,11 @@ mem_init(void)
 	// Find out how much memory the machine has (npages & npages_basemem).
 	i386_detect_memory();
 
-	// Remove this line when you're ready to test this function.
-	//panic("mem_init: This function is not finished\n");
-
-	//////////////////////////////////////////////////////////////////////
 	// create initial page directory.
-	//cprintf("kern_pgdir = %x\n", kern_pgdir);
-	//cprintf("kern_pgdir address = %x\n", &kern_pgdir);
-	//cprintf("pages = %x\n", pages);
-	//cprintf("pages address = %x\n", &pages);
-	//cprintf("page_free_list = %x\n", page_free_list);
-	//cprintf("page_free_list address = %x\n", &page_free_list);
 	kern_pgdir = (pde_t *) boot_alloc(PGSIZE);
-	///cprintf("kern_pgdir = %x\n", kern_pgdir);
-	//cprintf("kern_pgdir address = %x\n", &kern_pgdir);
-	//boot_alloc(0);
-	//cprintf("kern_pgdir = %x\n", kern_pgdir);
-	//cprintf("kern_pgdir address = %x\n", &kern_pgdir);
 
 	memset(kern_pgdir, 0, PGSIZE);
 
-	//cprintf("kern_pgdir = %x\n", kern_pgdir);
-	//cprintf("kern_pgdir address = %x\n", &kern_pgdir);
-	//////////////////////////////////////////////////////////////////////
 	// Recursively insert PD in itself as a page table, to form
 	// a virtual page table at virtual address UVPT.
 	// (For now, you don't have understand the greater purpose of the
