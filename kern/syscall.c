@@ -85,7 +85,7 @@ sys_exofork(void)
 	// LAB 4: Your code here.
 	struct Env *e;
 	int res = env_alloc(&e, curenv->env_id);
-	if(res > 0) return res;
+	if(res < 0) return res;
 	e->env_status = ENV_NOT_RUNNABLE;
 	e->env_tf = curenv->env_tf;
 	e->env_tf.tf_regs.reg_eax = 0;
